@@ -67,16 +67,20 @@ const run = async() => {
 
     // Initialize audio
     await Tone.start();
+    console.log('Audio context started');
+    setupVisualizer(); // Initialize visualizer first
     setupAdditionalAudio();
-    setupVisualizer();
 
     // Start face detection loop
     setInterval(async() => {
+        console.log("Running face detection...");
         let faceAIData = await faceapi.detectAllFaces(videoFeedEl)
             .withFaceLandmarks()
             .withFaceDescriptors()
             .withAgeAndGender()
             .withFaceExpressions();
+
+        console.log("Faces detected:", faceAIData.length);
 
         // Draw face landmarks
         canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
@@ -102,6 +106,9 @@ const run = async() => {
 }
 
 // ========== AUDIO FUNCTIONS ==========
+// ========== AUDIO FIXES ==========
+
+// Initialize all audio components properly
 function setupAdditionalAudio() {
     surpriseEffect = new Tone.PingPongDelay({
         delayTime: "16n",
@@ -123,12 +130,27 @@ function setupAdditionalAudio() {
     
     blinkSynth = new Tone.PluckSynth().toDestination();
     angryDistortion = new Tone.Distortion(0).toDestination();
+    
+    // Initialize wink synth
+    winkSynth.toDestination();
 }
 
+// Fixed happy loop setup
 function setupHappySynthLoop() {
-    if (isPlayingSadLoop) return;
+    if (isPlayingSadLoop) {
+        sadLoop.stop();
+        isPlayingSadLoop = false;
+    }
 
-    const synth = new Tone.PolySynth().connect(analyser);
+    const synth = new Tone.PolySynth(Tone.Synth, {
+        envelope: {
+            attack: 0.02,
+            decay: 0.1,
+            sustain: 0.3,
+            release: 0.1
+        }
+    }).connect(analyser).toDestination();
+
     const majorChordProgression = [
         ["C4", "E4", "G4"], ["F4", "A4", "C5"], 
         ["G4", "B4", "D5"], ["C4", "E4", "G4"]
@@ -141,20 +163,34 @@ function setupHappySynthLoop() {
         chordIndex++;
     }, "1n");
 
-    Tone.Transport.start();
+    // Start everything
+    Tone.Transport.bpm.value = 120;
     happyLoop.start(0);
+    Tone.Transport.start();
     isHappyLoopPlaying = true;
 }
 
+// Fixed sad loop setup
 const playSadMinorLoop = () => {
-    if (isPlayingSadLoop) return;
-  
-    const synth = new Tone.PolySynth().connect(analyser);
+    if (isHappyLoopPlaying) {
+        happyLoop.stop();
+        isHappyLoopPlaying = false;
+    }
+
+    const synth = new Tone.PolySynth(Tone.Synth, {
+        envelope: {
+            attack: 0.05,
+            decay: 0.2,
+            sustain: 0.3,
+            release: 0.2
+        }
+    }).connect(analyser).toDestination();
+
     const minorChordProgression = [
         ["A3", "C4", "E4"], ["D4", "F4", "A4"],
         ["E4", "G4", "B4"], ["A3", "C4", "E4"]
     ];
-  
+
     let chordIndex = 0;
     sadLoop = new Tone.Loop((time) => {
         const chord = minorChordProgression[chordIndex % minorChordProgression.length];
@@ -162,48 +198,61 @@ const playSadMinorLoop = () => {
         chordIndex++;
     }, "1n");
 
-    Tone.Transport.start();
+    Tone.Transport.bpm.value = 90;
     sadLoop.start(0);
+    Tone.Transport.start();
     isPlayingSadLoop = true;
 };
 
+// Fixed wink loop
 function toggleWinkLoop() {
-    if (!winkLoopPlaying) {
+    if (!winkLoop.isRunning) {
         winkLoop.start(0);
         Tone.Transport.start();
-        winkLoopPlaying = true;
     } else {
         winkLoop.stop();
-        winkLoopPlaying = false;
     }
 }
 
 // ========== VISUALIZER ==========
 function setupVisualizer() {
-    analyser = new Tone.Analyser("waveform", 1024);
+    // Create analyser node
+    analyser = new Tone.Analyser("waveform", 256);
+    
+    // Connect ALL audio sources to analyser
     Tone.Destination.connect(analyser);
     
+    // Get canvas and context
     waveformCanvas = document.getElementById('visualizer-canvas');
     waveformCtx = waveformCanvas.getContext('2d');
+    
+    // Set initial size
     resizeVisualizer();
     
+    // Handle window resizing
     window.addEventListener('resize', resizeVisualizer);
+    
+    // Start visualization loop
     Tone.Transport.scheduleRepeat(updateVisualization, "16n");
 }
 
 function resizeVisualizer() {
-    waveformCanvas.width = waveformCanvas.offsetWidth;
-    waveformCanvas.height = waveformCanvas.offsetHeight;
+    waveformCanvas.width = waveformCanvas.offsetWidth * window.devicePixelRatio;
+    waveformCanvas.height = waveformCanvas.offsetHeight * window.devicePixelRatio;
+    waveformCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
 }
 
 function updateVisualization() {
     if (!analyser || !waveformCanvas) return;
     
-    const width = waveformCanvas.width;
-    const height = waveformCanvas.height;
+    const width = waveformCanvas.offsetWidth;
+    const height = waveformCanvas.offsetHeight;
     const values = analyser.getValue();
     
+    // Clear canvas
     waveformCtx.clearRect(0, 0, width, height);
+    
+    // Draw waveform
     waveformCtx.lineWidth = 2;
     waveformCtx.strokeStyle = 'rgb(195, 21, 21)';
     waveformCtx.beginPath();
@@ -213,15 +262,17 @@ function updateVisualization() {
     
     for (let i = 0; i < values.length; i++) {
         const v = values[i] / 128;
-        const y = v * height / 2;
+        const y = v * height / 2 + height / 2;
         
-        if (i === 0) waveformCtx.moveTo(x, y);
-        else waveformCtx.lineTo(x, y);
+        if (i === 0) {
+            waveformCtx.moveTo(x, y);
+        } else {
+            waveformCtx.lineTo(x, y);
+        }
         
         x += sliceWidth;
     }
     
-    waveformCtx.lineTo(width, height/2);
     waveformCtx.stroke();
 }
 
@@ -335,6 +386,34 @@ function updateEmotionLog(faceData) {
     }
 }
 
+function updateEyeDisplay(state) {
+    const eyeElement = document.getElementById('eyelog');
+    if (!eyeElement) {
+        console.error("eyelog element not found!");
+        return;
+    }
+    
+    console.log("Updating eye display to:", state); // Debug line
+    
+    eyeElement.textContent = state === 'closed' ? 'CLOSED' : 
+                            state === 'wink' ? 'WINK' : 'OPEN';
+    eyeElement.style.color = state === 'closed' ? 'rgb(255, 50, 50)' : 
+                            state === 'wink' ? 'rgb(255, 200, 50)' : 'rgb(50, 255, 50)';
+}
+
+function updateMouthDisplay(state) {
+    const mouthElement = document.getElementById('mouthlog');
+    if (!mouthElement) {
+        console.error("mouthlog element not found!");
+        return;
+    }
+    
+    console.log("Updating mouth display to:", state); // Debug line
+    
+    mouthElement.textContent = state === 'open' ? 'OPEN' : 'CLOSED';
+    mouthElement.style.color = state === 'open' ? 'rgb(255, 150, 100)' : 'rgb(100, 200, 255)';
+}
+
 function handleSadExpression(faceAIData) {
     const isSad = faceAIData.some(face => face.expressions.sad > 0.7);
     if (isSad && !isPlayingSadLoop) {
@@ -346,9 +425,21 @@ function handleSadExpression(faceAIData) {
 }
 
 function handleMouthOpen(face) {
-    if (detectMouthOpen(face)) {
-        const mouthHeight = face.landmarks.positions[13].y - face.landmarks.positions[19].y;
+    if (!face?.landmarks) {
+        console.log("No face landmarks detected");
+        return;
+    }
+
+    const mouth = face.landmarks.positions.slice(48, 68);
+    const mouthHeight = mouth[13].y - mouth[19].y;
+    console.log("Mouth height:", mouthHeight); // Debug line
+
+    const isOpen = mouthHeight > 20;
+    updateMouthDisplay(isOpen ? 'open' : 'closed');
+    
+    if (isOpen) {
         const note = Math.min(84, 60 + Math.floor(mouthHeight / 5));
+        console.log("Playing mouth note:", note); // Debug line
         mouthSynth.triggerAttackRelease(Tone.Midi(note).toFrequency(), "8n");
     }
 }
@@ -365,12 +456,37 @@ function handleHeadTilt(face) {
 }
 
 function handleBlink(face) {
-    if (detectBothEyesClosed(face)) {
+    if (!face?.landmarks) {
+        console.log("No face landmarks detected");
+        return;
+    }
+
+    const leftEAR = getEAR(face.landmarks.getLeftEye());
+    const rightEAR = getEAR(face.landmarks.getRightEye());
+    console.log(`Eye Aspect Ratios - Left: ${leftEAR}, Right: ${rightEAR}`); // Debug line
+
+    const eyesClosed = leftEAR < 0.2 && rightEAR < 0.2;
+    const winkDetected = (leftEAR < 0.2 && rightEAR > 0.3) || 
+                         (rightEAR < 0.2 && leftEAR > 0.3);
+
+    if (eyesClosed) {
+        console.log("Both eyes closed");
+        updateEyeDisplay('closed');
+    } else if (winkDetected) {
+        console.log("Wink detected");
+        updateEyeDisplay('wink');
+    } else {
+        console.log("Eyes open");
+        updateEyeDisplay('open');
+    }
+    
+    if (eyesClosed) {
         const notes = ["C4", "E4", "G4", "A4", "D5"];
         const randomNote = notes[Math.floor(Math.random() * notes.length)];
         blinkSynth.triggerAttackRelease(randomNote, "16n");
     }
 }
+
 
 function handleAngry(face) {
     if (face.expressions.angry > 0.7) {

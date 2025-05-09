@@ -300,6 +300,11 @@ p {
     border-radius: 10px;
     height: 70%;
     width: 89%;
+    align-items: center;
+    justify-content: center;
+    font-family: 'BaiJamjuree-Regular';
+    font-size: 50px;
+    color: rgb(195, 21, 21);
 }
 
 .mouth {
@@ -309,7 +314,7 @@ p {
     width: 100%;
     padding: 5px;
     padding-left: 10px;
-    border-bottom: 0.5px dashed white;
+    border-bottom: 0.5px dashed white;   
 }
 
 #mouthlog {
@@ -318,6 +323,11 @@ p {
     border-radius: 10px;
     height: 70%;
     width: 89%;
+    align-items: center;
+    justify-content: center;
+    font-family: 'BaiJamjuree-Regular';
+    font-size: 50px;
+    color: rgb(195, 21, 21);
 }
 
 .buttons {
