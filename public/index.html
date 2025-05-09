@@ -1,0 +1,70 @@
+<link rel="stylesheet" href="../public/styles.css" />
+<style>
+    #video-feed{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin:0;
+        padding:0;
+        opacity: 0;
+        border: 0.5px white dashed;
+    }
+    img{
+        max-width: 45%
+    }
+    canvas{
+        position: absolute;
+    }
+</style>
+
+<header>
+    <h1>FACE AS INSTRUMENT</h1>
+    <div id="about">?</div>
+</header>
+
+<section id="container">
+    <section class="column left">
+        <section class="feeling">
+            <h2>CURRENTLY FEELING...</h2>
+            <div id="current"></div>
+        </section>
+        <section class="emotionlog">
+            <div class="logtitle"><h2>EMOTION LOG</h2></div>
+            <div class="log"></div>
+        </section>
+    </section>
+    <section class="column center">
+        <section class="wip"></section>
+        <section class="video">
+            <video id="video-feed" width="560" height="435" autoplay="muted"></video>
+            <canvas id="canvas"></canvas>
+        </section>
+        <section class="visualizer"></section>
+    </section>
+    <section class="column right"> 
+        <section class="right-column-section eyes">
+            <h2>EYES</h2>
+        </section>
+        <section class="right-column-section mouth">
+            <h2>MOUTH</h2>
+            <p>open</p>
+        </section>
+        <section class="right-column-section buttons">
+            <h2>BUTTONS</h2>
+        </section>
+    </section>
+</section>
+
+<div id="aboutpopup">
+    <button id="closeAbout">✕</button>
+    <p>This website is an experiment using face-api.js, exploring how the human face can be used to trigger sounds-- the face as an instrument. Coded by Rosa de Vera.</p>
+    <br><p>emotions = chord progressions</p>
+    <p>blink = ?</p>
+    <p>wink = drum percussion</p>
+    <p>open mouth = ?</p>
+    <p>tilt head = ?</p></br>
+</div>
+
+<script src="https://unpkg.com/tone"></script>
+<script src="./face-api.min.js"></script>
+<script src="./scripts.js"></script>

@@ -1,0 +1,297 @@
+body {
+    margin:0;
+    padding:0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #1e1e1e;
+}
+
+@font-face {
+    font-family: BaiJamjuree-Regular;
+    src: url(./Bai_Jamjuree/BaiJamjuree-Regular.ttf);
+}
+
+@font-face {
+    font-family: BaiJamjuree-Bold;
+    src: url(./Bai_Jamjuree/BaiJamjuree-Bold.ttf);
+}
+
+header {
+    position: fixed;
+    top:0;
+    background-color: #1e1e1e;
+    color: white;
+    height: 40px;
+    width:100%;
+    padding: 5px;
+    padding-left: 30px;
+    /* border: solid white 2px; */
+}
+
+h1 {
+    color: white;
+    font-family: 'BaiJamjuree-Bold';
+    font-size: 12px;
+}
+
+h2 {
+    color: white;
+    font-family: 'BaiJamjuree-Regular';
+    font-size: 12px;
+}
+
+p {
+    color: white;
+    font-family: 'BaiJamjuree-Regular';
+    font-size: 12px;
+}
+
+#about {
+    position: fixed;
+    top:10px;
+    right: 15px;
+    font-family: 'BaiJamjuree-Bold';
+    font-size: 15px;
+}
+
+#about:hover {
+    cursor: pointer;
+}
+
+#aboutpopup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+#aboutpopup.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+#aboutpopup p {
+    color: white;
+    font-size: 16px;
+    max-width: 600px;
+    padding: 0 20px;
+    text-align: center;
+}
+
+#closeAbout {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 10px;
+}
+
+#closeAbout:hover {
+    color: #ccc;
+}
+
+#container {
+    display: flex;
+    position: fixed;
+    bottom:0;
+    height: 95vh;
+    width: 100vw;
+    color: white;
+}
+  
+.column {
+    display: flex;
+    flex: 1;
+    gap:5px;
+    height: 100%;
+    background-color: #2b2b2b;
+}
+
+.left {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-right: 0.5px dashed white;
+}
+
+.feeling {
+    color: white;
+    padding: 10px;
+    height: 135px;
+    border-bottom: 0.5px dashed white;
+}
+
+.emotionlog {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 400px;
+}
+
+.logtitle{
+    position: absolute;
+    top:0;
+    height: 40px;
+    background-color: #2b2b2b;
+    width: 100%;
+    z-index: 1;
+}
+
+.logtitle h2 {
+    padding-left: 10px;
+}
+
+.log {
+    background-color: black;
+    height: 100%;
+    padding-top: 40px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+    scroll-behavior: smooth;
+}
+
+.log::-webkit-scrollbar {
+    width: 8px;
+}
+.log::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+.log::-webkit-scrollbar-thumb {
+    background: #444;
+}
+.log::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.log-entry {
+    padding: 10px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    color: white;
+    font-family: 'BaiJamjuree-Regular';
+    font-size: 12px;
+}
+
+.emotion-name {
+    text-transform: capitalize;
+}
+
+.emotion-value {
+    color: #aaa;
+    font-family: 'BaiJamjuree-Regular';
+    font-size: 12px;
+}
+
+#current {
+    font-size: 12px;
+    padding: 15px;
+    background-color: black;
+    border-radius: 10px;
+    height: 65px;
+}
+
+#current .emotion-name {
+    color: rgb(195, 21, 21);
+    font-family: 'BaiJamjuree-Regular';
+    font-size: 50px;
+    text-transform: capitalize;
+}
+
+#current .emotion-value {
+    color: #ccc;
+    margin-left: 10px;
+    font-family: 'BaiJamjuree-Regular';
+    font-size: 50px;
+}
+
+.center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: stretch;
+    align-items: stretch;
+    border-right: 0.5px dashed white;
+    height: 100%;
+}
+
+.wip {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    padding: 10px;
+    border-bottom: 0.5px dashed white;
+}
+.video {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    background-color: black;
+    border-radius: 10px;
+    margin: auto;
+}
+
+.visualizer {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    padding: 10px;
+    border-top: 0.5px dashed white;
+}
+
+.right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+}
+
+.eyes {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    padding: 5px;
+    padding-left: 10px;
+    border-bottom: 0.5px dashed white;
+}
+
+.mouth {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    padding: 5px;
+    padding-left: 10px;
+    border-bottom: 0.5px dashed white;
+}
+
+.buttons {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    padding: 5px;
+    padding-left: 10px;
+}
+
+#video-feed, #canvas {
+    transform: scaleX(-1);
+}
