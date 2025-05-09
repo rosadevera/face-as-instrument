@@ -169,41 +169,79 @@ const run = async()=>{
         const WINK_MIN_DURATION = 200; // Minimum wink duration in ms
         const WINK_COOLDOWN = 500; // Time between allowed wink detections
 
+    // Add these after your existing Tone.js variables
+    let surpriseEffect, tiltFilter, mouthSynth, blinkSynth, angryDistortion;
+
+    // Initialize additional audio components
+    function setupAdditionalAudio() {
+        // Surprise effect (glitch/echo)
+        surpriseEffect = new Tone.PingPongDelay({
+            delayTime: "16n",
+            feedback: 0.6,
+            wet: 0
+        }).toDestination();
+        
+        // Head tilt filter
+        tiltFilter = new Tone.AutoFilter({
+            frequency: "1n",
+            baseFrequency: 200,
+            octaves: 2,
+            wet: 0
+        }).toDestination();
+        
+        // Mouth open synth
+        mouthSynth = new Tone.MonoSynth({
+            oscillator: { type: "sawtooth" },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.4, release: 0.1 }
+        }).toDestination();
+        
+        // Blink randomizer
+        blinkSynth = new Tone.PluckSynth().toDestination();
+        
+        // Angry distortion
+        angryDistortion = new Tone.Distortion(0).toDestination();
+    }
+
         let winkDetected = false;
         let winkLoopPlaying = false;
         let lastWinkTime = 0;
         let winkStartTime = 0;
 
-        function detectWink(face) {
-            if (!face || !face.landmarks) return;
-            
+        // Replace your existing wink detection with:
+function detectWink(face) {
+    if (!face || !face.landmarks) return false;
+    
+    const leftEAR = getEAR(face.landmarks.getLeftEye());
+    const rightEAR = getEAR(face.landmarks.getRightEye());
+    
+    // Wink is when one eye is closed and the other is open
+    return (leftEAR < 0.2 && rightEAR > 0.3) || (rightEAR < 0.2 && leftEAR > 0.3);
+}
+
+        
+
+        
+        function detectMouthOpen(face) {
+            if (!face.landmarks) return false;
+            const mouth = face.landmarks.positions.slice(48, 68);
+            const mouthHeight = mouth[13].y - mouth[19].y; // Vertical distance between lips
+            return mouthHeight > 20; // Adjust threshold based on testing
+        }
+
+        function detectHeadTilt(face) {
+            if (!face.landmarks) return 0;
+            const leftEye = face.landmarks.getLeftEye();
+            const rightEye = face.landmarks.getRightEye();
+            // Calculate angle between eyes
+            const angle = Math.atan2(rightEye[0].y - leftEye[0].y, rightEye[0].x - leftEye[0].x);
+            return angle; // Returns tilt angle in radians
+        }
+
+        function detectBothEyesClosed(face) {
+            if (!face.landmarks) return false;
             const leftEAR = getEAR(face.landmarks.getLeftEye());
             const rightEAR = getEAR(face.landmarks.getRightEye());
-            const now = Date.now();
-
-            // Check for wink condition
-            const isLeftWink = leftEAR < WINK_THRESHOLD && rightEAR > EYE_OPEN_THRESHOLD;
-            const isRightWink = rightEAR < WINK_THRESHOLD && leftEAR > EYE_OPEN_THRESHOLD;
-            
-            // Wink detection logic
-            if (!winkDetected && (isLeftWink || isRightWink)) {
-                if (winkStartTime === 0) {
-                    winkStartTime = now; // Start timing the wink
-                } else if (now - winkStartTime >= WINK_MIN_DURATION && 
-                        now - lastWinkTime >= WINK_COOLDOWN) {
-                    // Valid wink detected
-                    winkDetected = true;
-                    lastWinkTime = now;
-                    toggleWinkLoop();
-                    console.log(`Wink detected! ${isLeftWink ? 'Left' : 'Right'} eye`);
-                }
-            } 
-            // Reset if eyes are open or wink is too short
-            else if ((leftEAR > WINK_THRESHOLD && rightEAR > WINK_THRESHOLD) || 
-                    (winkStartTime > 0 && now - winkStartTime < WINK_MIN_DURATION)) {
-                winkDetected = false;
-                winkStartTime = 0;
-            }
+            return leftEAR < 0.2 && rightEAR < 0.2; // Both eyes very closed
         }
     }, 200)
 }
@@ -340,17 +378,86 @@ const winkSynth = new Tone.MembraneSynth().toDestination();
         
 
 setInterval(async() => {
-    let faceAIData = await faceapi.detectAllFaces(videoFeedEl)
-        .withFaceLandmarks()
-        .withFaceDescriptors()
-        .withAgeAndGender()
-        .withFaceExpressions();
+    // Add these inside your face detection interval, after detecting the face
+if (faceAIData.length > 0) {
+    const mainFace = faceAIData[0];
     
+    // Existing emotion detection
+    updateEmotionLog(mainFace);
+    playHappyLoop(mainFace);
     
-    if (faceAIData.length > 0) {
-        const mainFace = faceAIData[0];
-        updateEmotionLog(mainFace); 
-        playHappyLoop(mainFace);
+    // New detections
+    handleMouthOpen(mainFace);
+    handleHeadTilt(mainFace);
+    handleBlink(mainFace);
+    handleAngry(mainFace);
+    handleSurprised(mainFace);
+    handleDisgusted(mainFace);
+}
+
+// Add these new handler functions
+function handleMouthOpen(face) {
+    if (detectMouthOpen(face)) {
+        // Play notes based on mouth openness
+        const mouthHeight = face.landmarks.positions[13].y - face.landmarks.positions[19].y;
+        const note = Math.min(84, 60 + Math.floor(mouthHeight / 5)); // Map to MIDI notes
+        mouthSynth.triggerAttackRelease(Tone.Midi(note).toFrequency(), "8n");
     }
+}
+
+function handleHeadTilt(face) {
+    const tiltAngle = detectHeadTilt(face);
+    if (Math.abs(tiltAngle) > 0.2) { // Significant tilt
+        // Pan based on tilt direction
+        const panPos = tiltAngle / Math.PI; // Normalize to -1..1
+        Tone.Destination.pan.value = panPos;
+        
+        // Adjust filter based on tilt amount
+        tiltFilter.baseFrequency = 200 + (Math.abs(tiltAngle) * 1000);
+        tiltFilter.wet.value = 0.7;
+    } else {
+        tiltFilter.wet.value = 0;
+    }
+}
+
+function handleBlink(face) {
+    if (detectBothEyesClosed(face)) {
+        // Randomize sound on blink
+        const notes = ["C4", "E4", "G4", "A4", "D5"];
+        const randomNote = notes[Math.floor(Math.random() * notes.length)];
+        blinkSynth.triggerAttackRelease(randomNote, "16n");
+    }
+}
+
+function handleAngry(face) {
+    if (face.expressions.angry > 0.7) {
+        angryDistortion.distortion = 0.8;
+        Tone.Destination.chain(angryDistortion);
+    } else {
+        angryDistortion.distortion = 0;
+        Tone.Destination.disconnect(angryDistortion);
+    }
+}
+
+function handleSurprised(face) {
+    if (face.expressions.surprised > 0.7) {
+        surpriseEffect.wet.value = 0.5;
+        // Add a high pitch "ping"
+        const ping = new Tone.MetalSynth().toDestination();
+        ping.triggerAttackRelease("C6", "32n");
+    } else {
+        surpriseEffect.wet.value = 0;
+    }
+}
+
+function handleDisgusted(face) {
+    if (face.expressions.disgusted > 0.7) {
+        // Create a "squelchy" filter effect
+        const disgustFilter = new Tone.Filter(500, "bandpass").toDestination();
+        disgustFilter.Q.value = 10;
+        disgustFilter.frequency.rampTo(2000, 0.5);
+        setTimeout(() => disgustFilter.dispose(), 1000);
+    }
+}
 }, 200);
 
