@@ -4,6 +4,7 @@ let lastEmotion = '';
 const logLimit = 20;
 
 // Tone.js audio
+const panner = new Tone.Panner().toDestination();
 let isHappyLoopPlaying = false;
 let happyLoop;
 let isPlayingSadLoop = false;
@@ -459,13 +460,14 @@ function handleMouthOpen(face) {
 }
 
 function handleHeadTilt(face) {
+    if (!face?.landmarks || !panner) return;
+    
     const tiltAngle = detectHeadTilt(face);
-    if (Math.abs(tiltAngle) > 0.2) {
-        Tone.Destination.pan.value = tiltAngle / Math.PI;
+    panner.pan.value = tiltAngle / Math.PI; // Now using our dedicated panner
+    
+    if (tiltFilter) {
         tiltFilter.baseFrequency = 200 + (Math.abs(tiltAngle) * 1000);
-        tiltFilter.wet.value = 0.7;
-    } else {
-        tiltFilter.wet.value = 0;
+        tiltFilter.wet.value = Math.abs(tiltAngle) > 0.2 ? 0.7 : 0;
     }
 }
 
