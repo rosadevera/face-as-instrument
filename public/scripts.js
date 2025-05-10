@@ -26,6 +26,12 @@ document.body.addEventListener('click', async () => {
     console.log('Audio context started');
 });
 
+const volumeSlider = document.getElementById('volume-slider');
+volumeSlider.addEventListener('input', () => {
+    const volume = parseInt(volumeSlider.value);
+    Tone.Destination.volume.value = volume;
+});
+
 // About popup handlers
 document.getElementById('about').addEventListener('click', function() {
     document.getElementById('aboutpopup').classList.add('active');
@@ -91,7 +97,8 @@ const run = async() => {
         if (faceAIData.length > 0) {
             const mainFace = faceAIData[0];
             updateEmotionLog(mainFace);
-            playHappyLoop(mainFace);
+            updateMouthDisplay(mainFace);
+            updateEyeDisplay(mainFace);  
             handleSadExpression(faceAIData);
             
             // New facial controls
@@ -316,14 +323,20 @@ function detectWink(face) {
 function detectMouthOpen(face) {
     if (!face?.landmarks) return false;
     const mouth = face.landmarks.positions.slice(48, 68);
-    return (mouth[13].y - mouth[19].y) > 20;
+    const topLip = mouth[13].y;
+    const bottomLip = mouth[19].y;
+    const mouthOpen = Math.abs(bottomLip - topLip);
+    const faceHeight = face.boundingBox?.height || 1;
+    return (mouthOpen / faceHeight) > 0.15;
 }
 
 function detectHeadTilt(face) {
     if (!face?.landmarks) return 0;
     const leftEye = face.landmarks.getLeftEye();
     const rightEye = face.landmarks.getRightEye();
-    return Math.atan2(rightEye[0].y - leftEye[0].y, rightEye[0].x - leftEye[0].x);
+    const tiltRadians = Math.atan2(rightEye[0].y - leftEye[0].y, rightEye[0].x - leftEye[0].x);
+    const tiltDegrees = tiltRadians * (180 / Math.PI);
+    return tiltDegrees;
 }
 
 function detectBothEyesClosed(face) {
@@ -334,15 +347,15 @@ function detectBothEyesClosed(face) {
 }
 
 function getEAR(eye) {
-    const A = distance(eye[1], eye[5]);
-    const B = distance(eye[2], eye[4]);
-    const C = distance(eye[0], eye[3]);
-    return (A + B) / (2 * C);
+    const vertical1 = distance(eye[1], eye[5]);
+    const vertical2 = distance(eye[2], eye[4]);
+    const horizontal = distance(eye[0], eye[3]);
+    return (vertical1 + vertical2) / (2.0 * horizontal);
 }
-
+  
 function distance(p1, p2) {
-    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-}
+    return Math.hypot(p2.x - p1.x, p2.y - p1.y);
+}  
 
 // ========== EMOTION HANDLERS ==========
 function updateEmotionLog(faceData) {
@@ -392,13 +405,11 @@ function updateEyeDisplay(state) {
         console.error("eyelog element not found!");
         return;
     }
-    
-    console.log("Updating eye display to:", state); // Debug line
-    
+    console.log("Updating eye display to:", state);
     eyeElement.textContent = state === 'closed' ? 'CLOSED' : 
-                            state === 'wink' ? 'WINK' : 'OPEN';
-    eyeElement.style.color = state === 'closed' ? 'rgb(255, 50, 50)' : 
-                            state === 'wink' ? 'rgb(255, 200, 50)' : 'rgb(50, 255, 50)';
+                             state === 'wink' ? 'WINK' : 'OPEN';
+    eyeElement.style.color = state === 'closed' ? 'red' : 
+                             state === 'wink' ? 'orange' : 'green';
 }
 
 function updateMouthDisplay(state) {
@@ -407,12 +418,15 @@ function updateMouthDisplay(state) {
         console.error("mouthlog element not found!");
         return;
     }
-    
-    console.log("Updating mouth display to:", state); // Debug line
-    
+    console.log("Updating mouth display to:", state);
     mouthElement.textContent = state === 'open' ? 'OPEN' : 'CLOSED';
-    mouthElement.style.color = state === 'open' ? 'rgb(255, 150, 100)' : 'rgb(100, 200, 255)';
+    mouthElement.style.color = state === 'open' ? 'salmon' : 'skyblue';
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    updateEyeDisplay('closed');
+    updateMouthDisplay('open');
+});
 
 function handleSadExpression(faceAIData) {
     const isSad = faceAIData.some(face => face.expressions.sad > 0.7);
@@ -486,7 +500,6 @@ function handleBlink(face) {
         blinkSynth.triggerAttackRelease(randomNote, "16n");
     }
 }
-
 
 function handleAngry(face) {
     if (face.expressions.angry > 0.7) {
